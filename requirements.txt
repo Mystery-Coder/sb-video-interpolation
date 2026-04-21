@@ -1,0 +1,10 @@
+torch
+torchvision
+torchaudio
+diffusers
+transformers
+accelerate
+einops
+opencv-python
+tqdm
+pandas
