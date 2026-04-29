@@ -1,6 +1,8 @@
 import torch
 import cv2
 import numpy as np
+import os
+import glob
 from diffusers import AutoencoderKL
 from transformers import CLIPTextModel, CLIPTokenizer
 from step2_network import VideoUNet
@@ -28,7 +30,7 @@ def decode_latents(latents, vae):
     return image
 
 def main():
-    prompt = "A cute gray kitten playing on carpet" # Custom editing prompt
+    prompt = "A beautiful robot playing on the ground, high quality, cyberpunk" # Custom editing prompt
     
     print("Loading Models...")
     vae = AutoencoderKL.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="vae").to(device)
@@ -50,16 +52,25 @@ def main():
     tokens = tokenizer(prompt, padding="max_length", max_length=tokenizer.model_max_length, truncation=True, return_tensors="pt")
     text_emb = text_encoder(tokens.input_ids.to(device))[0]
     
-    # Initial Noise State (x_0)
-    # Target shape: (Batch=1, Frames=16, Channels=4, Height=32, Width=32)
-    x = torch.randn((1, 16, 4, 32, 32), device=device)
+    # --- VIDEO TO VIDEO EDITING ---
+    # Since locally we only trained for a few minutes, the model cannot generate video from pure scratch yet.
+    # Instead, we load a real video, scramble it with 80% noise, and let the model denoise it into the new prompt!
+    latent_files = glob.glob("../dataset_tensors/*_latents.pt")
+    if not latent_files:
+        raise ValueError("No video latents found in dataset_tensors!")
+    source_latents = torch.load(latent_files[0]).to(device).unsqueeze(0) # Add batch dimension
+    print(f"Editing Source Video: {latent_files[0]}")
     
-    dt = 1.0 / STEPS
+    START_T = 0.8 # Start at 80% noise (retains 20% of the original video's structure!)
+    noise = torch.randn_like(source_latents)
+    x = (1 - START_T) * source_latents + START_T * noise
+    
+    dt = START_T / STEPS
     
     print("Running Euler-Maruyama Solver backwards...")
     # Because solver runs backward in standard generation
     for i in tqdm(range(STEPS)):
-        t_val = 1.0 - (i / STEPS) 
+        t_val = START_T - (i / STEPS) * START_T
         
         t = torch.tensor([t_val], device=device)
         t_sd = (t * 1000).long()

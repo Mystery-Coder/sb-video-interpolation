@@ -2,6 +2,7 @@ import os
 import torch
 import cv2
 import pandas as pd
+import numpy as np
 from diffusers import AutoencoderKL
 from transformers import CLIPTextModel, CLIPTokenizer
 from tqdm import tqdm
@@ -10,7 +11,7 @@ from tqdm import tqdm
 # CONFIGURATION
 # ==========================================
 VIDEOS_DIR = "../videos/"
-METADATA_FILE = "../metadata.csv"
+METADATA_FILE = "../webvid_metadata.csv"
 OUTPUT_DIR = "../dataset_tensors/"
 MAX_FRAMES = 16
 IMG_SIZE = 256 # Switch to 512 on ROCm instance
@@ -35,7 +36,7 @@ def extract_frames(video_path):
             frames.append(frames[-1] if frames else torch.zeros((IMG_SIZE, IMG_SIZE, 3)))
             
     # Normalize to [-1, 1] for VAE
-    frames_tensor = torch.tensor(frames).float() / 127.5 - 1.0
+    frames_tensor = torch.tensor(np.array(frames)).float() / 127.5 - 1.0
     frames_tensor = frames_tensor.permute(0, 3, 1, 2) # (F, C, H, W)
     return frames_tensor
 
