@@ -9,7 +9,7 @@ from step2_network import VideoUNet
 from tqdm import tqdm
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-STEPS = 50
+STEPS = 75
 
 def decode_latents(latents, vae):
     with torch.no_grad():
@@ -80,8 +80,11 @@ def main():
         
         noise = torch.randn_like(x)
         
-        # SB backward integration
-        x = x - drift * dt + 0.1 * (dt ** 0.5) * noise
+        # SB backward integration (omit noise on final step for sharpest output!)
+        if i == STEPS - 1:
+            x = x - drift * dt
+        else:
+            x = x - drift * dt + 0.1 * (dt ** 0.5) * noise
         
     print("Decoding to video...")
     frames = decode_latents(x, vae)[0] # Extract the first batch (16 frames)

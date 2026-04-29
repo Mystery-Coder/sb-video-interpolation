@@ -13,8 +13,8 @@ from tqdm import tqdm
 VIDEOS_DIR = "../videos/"
 METADATA_FILE = "../webvid_metadata.csv"
 OUTPUT_DIR = "../dataset_tensors/"
-MAX_FRAMES = 16
-IMG_SIZE = 256 # Switch to 512 on ROCm instance
+MAX_FRAMES = 64
+IMG_SIZE = 512 # Switch to 512 on ROCm instance
 
 # Device setup
 device = "cuda" if torch.cuda.is_available() else "cpu"
