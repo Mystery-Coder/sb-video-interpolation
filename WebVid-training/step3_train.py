@@ -10,7 +10,7 @@ from tqdm import tqdm
 # CONFIGURATION
 # ==========================================
 DATA_DIR = "../dataset_tensors/"
-BATCH_SIZE = 4 # <-- ROCm MODIFY: Change to 4 or 8 on your MI300X!
+BATCH_SIZE = 8 # <-- ROCm MODIFY: Increased to 8 to fully saturate the 192GB MI300X!
 EPOCHS = 50
 LR = 1e-4
 

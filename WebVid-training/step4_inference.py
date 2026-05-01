@@ -9,7 +9,7 @@ from step2_network import VideoUNet
 from tqdm import tqdm
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-STEPS = 75
+STEPS = 50
 
 def decode_latents(latents, vae):
     with torch.no_grad():
