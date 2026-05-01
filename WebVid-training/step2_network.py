@@ -1,6 +1,17 @@
 import torch
 import torch.nn as nn
+import logging
 from diffusers import UNet2DConditionModel
+
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("training_pipeline.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 class VideoUNet(nn.Module):
     """
@@ -12,7 +23,7 @@ class VideoUNet(nn.Module):
         super().__init__()
         
         # Load the massive pre-trained image U-Net
-        print("Loading Pre-Trained SD 1.5 U-Net...")
+        logger.info("Loading Pre-Trained SD 1.5 U-Net...")
         self.unet = UNet2DConditionModel.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="unet")
         
         # FREEZE the 2D spatial layers so we don't forget what the world looks like!

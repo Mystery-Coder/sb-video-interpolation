@@ -2,9 +2,20 @@ import os
 import glob
 import torch
 import torch.nn as nn
+import logging
 from torch.utils.data import Dataset, DataLoader
 from step2_network import VideoUNet
 from tqdm import tqdm
+
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("training_pipeline.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # ==========================================
 # CONFIGURATION
@@ -37,7 +48,7 @@ class LatentVideoDataset(Dataset):
         return latents, text_emb
 
 def main():
-    print(f"Using device: {device}")
+    logger.info(f"Using device: {device}")
     
     # 1. Setup Model
     model = VideoUNet().to(device)
@@ -50,7 +61,7 @@ def main():
     dataset = LatentVideoDataset(DATA_DIR)
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
     
-    print(f"Starting training on {len(dataset)} videos...")
+    logger.info(f"Starting training on {len(dataset)} videos...")
     
     # 3. Soft-Constrained Schrödinger Bridge Loop
     for epoch in range(EPOCHS):
@@ -97,12 +108,12 @@ def main():
             total_loss += loss.item()
             pbar.set_postfix({"loss": f"{loss.item():.4f}"})
             
-        print(f"Epoch {epoch+1} Average Loss: {total_loss/len(dataloader):.4f}")
+        logger.info(f"Epoch {epoch+1} Average Loss: {total_loss/len(dataloader):.4f}")
         
         # Save checkpoint
         if (epoch + 1) % 10 == 0 or epoch == EPOCHS - 1:
             torch.save(model.state_dict(), f"video_unet_epoch_{epoch+1}.pth")
-            print("Checkpoint saved!")
+            logger.info("Checkpoint saved!")
 
 if __name__ == "__main__":
     main()

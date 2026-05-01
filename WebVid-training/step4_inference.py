@@ -3,10 +3,21 @@ import cv2
 import numpy as np
 import os
 import glob
+import logging
 from diffusers import AutoencoderKL
 from transformers import CLIPTextModel, CLIPTokenizer
 from step2_network import VideoUNet
 from tqdm import tqdm
+
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("training_pipeline.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 STEPS = 50
@@ -32,7 +43,7 @@ def decode_latents(latents, vae):
 def main():
     prompt = "A beautiful robot playing on the ground, high quality, cyberpunk" # Custom editing prompt
     
-    print("Loading Models...")
+    logger.info("Loading Models...")
     vae = AutoencoderKL.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="vae").to(device)
     tokenizer = CLIPTokenizer.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="tokenizer")
     text_encoder = CLIPTextModel.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="text_encoder").to(device)
@@ -42,9 +53,9 @@ def main():
     # Only load strict=False because we only trained the temporal layers
     try:
         model.load_state_dict(torch.load("video_unet_epoch_50.pth"), strict=False)
-        print("Loaded Checkpoint Successfully.")
+        logger.info("Loaded Checkpoint Successfully.")
     except Exception as e:
-        print(f"Warning: Could not load checkpoint. Using untrained temporal weights. {e}")
+        logger.warning(f"Warning: Could not load checkpoint. Using untrained temporal weights. {e}")
         
     model.eval()
     
@@ -59,7 +70,7 @@ def main():
     if not latent_files:
         raise ValueError("No video latents found in dataset_tensors!")
     source_latents = torch.load(latent_files[0]).to(device).unsqueeze(0) # Add batch dimension
-    print(f"Editing Source Video: {latent_files[0]}")
+    logger.info(f"Editing Source Video: {latent_files[0]}")
     
     START_T = 0.8 # Start at 80% noise (retains 20% of the original video's structure!)
     noise = torch.randn_like(source_latents)
@@ -67,7 +78,7 @@ def main():
     
     dt = START_T / STEPS
     
-    print("Running Euler-Maruyama Solver backwards...")
+    logger.info("Running Euler-Maruyama Solver backwards...")
     # Because solver runs backward in standard generation
     for i in tqdm(range(STEPS)):
         t_val = START_T - (i / STEPS) * START_T
@@ -86,7 +97,7 @@ def main():
         else:
             x = x - drift * dt + 0.1 * (dt ** 0.5) * noise
         
-    print("Decoding to video...")
+    logger.info("Decoding to video...")
     frames = decode_latents(x, vae)[0] # Extract the first batch (16 frames)
     
     # Save video
@@ -95,7 +106,7 @@ def main():
         # Convert RGB back to BGR for OpenCV
         out.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
     out.release()
-    print("Video saved to output.mp4!")
+    logger.info("Video saved to output.mp4!")
 
 if __name__ == "__main__":
     main()

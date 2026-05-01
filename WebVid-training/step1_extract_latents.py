@@ -3,9 +3,20 @@ import torch
 import cv2
 import pandas as pd
 import numpy as np
+import logging
 from diffusers import AutoencoderKL
 from transformers import CLIPTextModel, CLIPTokenizer
 from tqdm import tqdm
+
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("training_pipeline.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # ==========================================
 # CONFIGURATION
@@ -43,14 +54,14 @@ def extract_frames(video_path):
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     
-    print("Loading VAE and CLIP models...")
+    logger.info("Loading VAE and CLIP models...")
     vae = AutoencoderKL.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="vae").to(device)
     tokenizer = CLIPTokenizer.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="tokenizer")
     text_encoder = CLIPTextModel.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="text_encoder").to(device)
     
     df = pd.read_csv(METADATA_FILE)
     
-    print("Processing videos and caching latents...")
+    logger.info("Processing videos and caching latents...")
     for idx, row in tqdm(df.iterrows(), total=len(df)):
         vid_id = str(row['videoid'])
         prompt = str(row.get('name', ''))
