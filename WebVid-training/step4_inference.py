@@ -30,7 +30,15 @@ def decode_latents(latents, vae):
         # Flatten batch and frames to pass to VAE
         latents_in = latents.view(B*F, C, H, W)
         
-        image = vae.decode(latents_in).sample
+        # Decode in smaller chunks to prevent massive VAE memory spikes!
+        images = []
+        chunk_size = 8
+        for i in range(0, B*F, chunk_size):
+            chunk = latents_in[i:i+chunk_size]
+            chunk_img = vae.decode(chunk).sample
+            images.append(chunk_img)
+            
+        image = torch.cat(images, dim=0)
         
     image = (image / 2 + 0.5).clamp(0, 1)
     image = image.cpu().permute(0, 2, 3, 1).numpy()
