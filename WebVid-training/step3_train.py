@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 # CONFIGURATION
 # ==========================================
 DATA_DIR = "../dataset_tensors/"
-BATCH_SIZE = 8 # <-- ROCm MODIFY: Increased to 8 to fully saturate the 192GB MI300X!
+BATCH_SIZE = 4 # Reverted to 4. 8 causes VRAM swapping!
 EPOCHS = 50
 LR = 1e-4
 
@@ -53,6 +53,16 @@ def main():
     # 1. Setup Model
     model = VideoUNet().to(device)
     
+    # 1.5 Resume from latest checkpoint
+    start_epoch = 0
+    checkpoints = glob.glob("video_unet_epoch_*.pth")
+    if checkpoints:
+        # Sort checkpoints by epoch number to find the latest
+        latest_ckpt = max(checkpoints, key=lambda x: int(x.split('_')[-1].split('.')[0]))
+        model.load_state_dict(torch.load(latest_ckpt), strict=False)
+        start_epoch = int(latest_ckpt.split('_')[-1].split('.')[0])
+        logger.info(f"Resuming training from {latest_ckpt} (Starting at Epoch {start_epoch + 1})")
+        
     # Only optimize the temporal layers!
     optimizer = torch.optim.AdamW(model.temporal_layers.parameters(), lr=LR)
     criterion = nn.MSELoss()
@@ -64,7 +74,7 @@ def main():
     logger.info(f"Starting training on {len(dataset)} videos...")
     
     # 3. Soft-Constrained Schrödinger Bridge Loop
-    for epoch in range(EPOCHS):
+    for epoch in range(start_epoch, EPOCHS):
         total_loss = 0
         pbar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
         

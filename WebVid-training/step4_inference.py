@@ -41,7 +41,9 @@ def decode_latents(latents, vae):
     return image
 
 def main():
-    prompt = "A beautiful robot playing on the ground, high quality, cyberpunk" # Custom editing prompt
+    # Since the source video is a City Skyline with a Bridge, the prompt MUST match the structural layout!
+    # If you try to draw a robot out of a bridge, it will look like a blurry mess.
+    prompt = "A futuristic cyberpunk city skyline at night with a glowing neon blue bridge, flying cars, 4k" 
     
     logger.info("Loading Models...")
     vae = AutoencoderKL.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="vae").to(device)
