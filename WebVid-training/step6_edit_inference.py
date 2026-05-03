@@ -12,6 +12,7 @@ from tqdm import tqdm
 
 logging.basicConfig(
     level=logging.INFO, 
+    force=True, # Added force=True to override HuggingFace loggers!
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler("edit_inference.log"),
@@ -24,25 +25,24 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 STEPS = 50
 START_T = 0.8 
 
-# Dictionary mapping Video ID to our Custom Edit Prompts
-# These prompts are specifically designed to match the structural geometry of the original videos!
-EDIT_PROMPTS = {
-    "1016280532": "A cute golden retriever puppy playing on a wooden floor at home, highly detailed",
-    "1032401924": "Futuristic cyberpunk hover-buses inside a neon-lit sci-fi transit station, 4k",
-    "1022131720": "Portrait of a majestic elven queen in ornate golden armor smiling into camera on black background, fantasy art",
-    "1023444685": "A glowing mechanical robotic rabbit in a metallic cyberpunk basket, highly detailed",
-    "31313158": "Animation of a walking metallic cyborg robot on a neon wireframe background, 4k",
-    "11857364": "Four glowing crystalline shards floating on white, highly detailed 3D render",
-    "1065907894": "Excited astronaut in a spacesuit isolated on black background looking at a glowing hologram, sci-fi",
-    "1051185190": "A steampunk wizard inspects glowing magical artifacts on shelves in a mystical library, 4k",
-    "1062687892": "Aerial of a futuristic sci-fi colony village on the surface of Mars, 4k",
-    "1019861101": "A futuristic cyberpunk city skyline at night with a glowing neon blue bridge, flying cars traffic time lapse, 4k",
-    "25979636": "Scenery of a river of molten lava in a volcanic wasteland, cinematic lighting",
-    "18599999": "A futuristic cyborg girl standing on a skyscraper roof with arms out enjoying the neon city view",
-    "1031360726": "A bouquet of glowing crystal flowers blooming. isolated on black background. macro time lapse",
-    "15386587": "A heavily armored space marine shooting a glowing laser hole in a spaceship wall, 4k",
-    "1027305596": "Flowing liquid gold and silver abstract background animation, highly detailed"
-}
+# A diverse list of artistic styles to apply to the videos!
+STYLES = [
+    "watercolor painting, soft colors, masterpiece",
+    "steampunk 3D render, gears and brass, highly detailed",
+    "oil painting in the style of Van Gogh, expressive strokes",
+    "Pixar style 3D animation, vibrant colors, cute",
+    "anime style illustration, Studio Ghibli, beautiful scenery",
+    "charcoal sketch, dramatic lighting, highly detailed",
+    "origami paper art, colorful paper textures, macro",
+    "neon retrowave 1980s aesthetic, glowing vibrant colors",
+    "claymation style, stop motion texture, plasticine",
+    "cinematic photorealistic, golden hour lighting, 8k resolution",
+    "stained glass window art, glowing vibrant light",
+    "post-apocalyptic wasteland style, cinematic lighting",
+    "fantasy Dungeons and Dragons concept art, magical glowing runes"
+]
+
+# Removed hardcoded dictionary to support 50 videos dynamically!
 
 def decode_latents(latents, vae):
     with torch.no_grad():
@@ -87,7 +87,20 @@ def main():
     
     os.makedirs("edited_videos", exist_ok=True)
     
-    for vid_id, prompt in EDIT_PROMPTS.items():
+    # Load metadata
+    df = pd.read_csv("../webvid_metadata.csv")
+    df_subset = df.head(50) # Process first 50 videos
+    
+    for idx, row in df_subset.iterrows():
+        vid_id = str(row['videoid'])
+        original_desc = str(row.get('name', ''))
+        
+        # Cycle through our diverse list of artistic styles
+        art_style = STYLES[idx % len(STYLES)]
+        
+        # Auto-generate the prompt by combining the original layout with the new art style
+        prompt = f"{original_desc}, {art_style}"
+        
         latent_file = f"../dataset_tensors/{vid_id}_latents.pt"
         if not os.path.exists(latent_file):
             logger.warning(f"Latents not found for {vid_id}, skipping...")

@@ -12,6 +12,7 @@ from tqdm import tqdm
 
 logging.basicConfig(
     level=logging.INFO, 
+    force=True, # Added force=True to override HuggingFace loggers!
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler("batch_inference.log"),
@@ -67,7 +68,7 @@ def main():
     
     # Load metadata
     df = pd.read_csv("../webvid_metadata.csv")
-    df_subset = df.head(15) # Grab first 15 videos
+    df_subset = df.head(50) # Grab first 50 videos
     
     os.makedirs("output_videos", exist_ok=True)
     
