@@ -59,7 +59,7 @@ Schr\"{o}dinger bridge, diffusion models, video editing, latent diffusion, CLIP 
 \section{Introduction}
 Video editing systems aim to improve creative expression, content accessibility, and visual storytelling. However, many current generative editing pipelines suffer from (i) lack of temporal coherence (e.g., flicker), (ii) vulnerability to semantic drift during generation, and (iii) limited accessibility for non-technical users who cannot author complex prompts or scripts. Diffusion-based generative models have demonstrated powerful image synthesis and editing capabilities, yet na\"{\i}vely applying per-frame diffusion to video can disrupt physical structure and motion, yielding temporally inconsistent results.
 
-This work proposes a text-guided video editing framework using \emph{soft-constrained Schr\"{o}dinger bridges}. We view a video as a sequence of latent variables transported through a learned vector field from a source distribution toward a target distribution. An U-Net neural network model with cross-attention is used to estimate the velocity of this flow. The model is guided by two objectives: a bridge matching loss that promotes temporal coherence and a CLIP-based soft constraint that aligns edits with the text prompt semantics. To reduce computational cost while preserving high-level content, the system operates in the latent space of a pretrained VAE (Stable Diffusion). Sampling uses an Euler--Maruyama stochastic differential equation (SDE) solver.
+This work proposes a text-guided video editing framework using \emph{soft-constrained Schr\"{o}dinger bridges}. We view a video as a sequence of latent variables transported through a learned vector field from a source distribution toward a target distribution. A U-Net neural network model with attention-based conditioning is used to estimate the velocity of this flow~\cite{ronneberger2015unet,vaswani2017attention}. The model is guided by two objectives: a bridge matching loss that promotes temporal coherence and a CLIP-based soft constraint that aligns edits with the text prompt semantics. To reduce computational cost while preserving high-level content, the system operates in the latent space of a pretrained VAE (Stable Diffusion). Sampling uses an Euler--Maruyama stochastic differential equation (SDE) solver.
 
 \subsection{Contributions}
 This paper (and accompanying repository) makes the following contributions:
@@ -76,20 +76,20 @@ We position our approach among recent directions in Schr{\"{o}}dinger bridges, o
 \subsection{Schr\"{o}dinger Bridges and Optimal Transport}
 Schr\"{o}dinger bridge (SB) problems connect entropic optimal transport with controlled stochastic processes and can be interpreted as finding the most likely stochastic dynamics consistent with marginal constraints while remaining close to a reference diffusion in relative entropy. Modern SB literature emphasizes (i) control-theoretic reformulations, (ii) efficient solvers in high-dimensional state spaces, and (iii) learning-based approximations that replace iterative procedures with neural drift parameterizations.
 
-Recent work on control-affine SBs relates optimality conditions to boundary value problems reminiscent of quantum mechanics and Bohm potentials~\cite{teter2025controlaffine}. Surveys on OT for machine learning summarize entropic OT, neural OT, and the role SBs play as dynamic counterparts to OT in practice~\cite{fernandes2025ot}. In high dimensions, SB matching and adjoint formulations aim to recover trajectories with reduced computational overhead and improved scalability~\cite{shin2026asbm}. Generalized and augmented bridge matching objectives broaden the class of corruption paths and targets that can be matched with neural drifts~\cite{liu2023generalized,debortoli2023augmented}. Soft-constrained SB formulations relax terminal constraints with penalties to trade off strict adherence to a target against fidelity to the reference process~\cite{garg2024softconstrained,ma2025convergence}.
+Classical surveys connect the Schr\"{o}dinger problem to entropy-regularized optimal transport and stochastic control~\cite{leonard2014survey}. Entropic optimal transport is also computationally attractive because Sinkhorn-style regularization yields scalable solvers~\cite{cuturi2013sinkhorn}. In generative modeling, diffusion Schr\"{o}dinger bridges reinterpret score-based sampling as finite-time transport between data and prior distributions~\cite{debortoli2021dsb}. Generalized and augmented bridge matching objectives broaden the class of corruption paths and targets that can be matched with neural drifts~\cite{liu2023generalized,debortoli2023augmented}. Soft-constrained SB formulations relax terminal constraints with penalties to trade off strict adherence to a target against fidelity to the reference process~\cite{garg2024softconstrained}.
 
 \subsection{Diffusion and Latent Diffusion Models}
-Denoising diffusion probabilistic models (DDPMs) model data generation as iterative denoising from Gaussian noise with time-conditioned neural networks~\cite{ho2020ddpm}. Latent diffusion models (LDMs) move the diffusion process to a learned latent space to reduce compute while maintaining perceptual quality, typically via a pretrained VAE and a U-Net with attention for conditional generation~\cite{rombach2022ldm}. Stable Diffusion popularizes large-scale latent diffusion with text conditioning and efficient inference, enabling downstream tasks including editing and controllable synthesis~\cite{stablediffusion2022}.
+Denoising diffusion models build on nonequilibrium thermodynamic views of iterative corruption and reversal~\cite{sohldickstein2015deep}. Denoising diffusion probabilistic models (DDPMs) model data generation as iterative denoising from Gaussian noise with time-conditioned neural networks~\cite{ho2020ddpm}, while score-based SDE formulations describe generation through continuous-time reverse stochastic dynamics~\cite{song2021sde}. DDIM sampling shows that related non-Markovian denoising processes can reduce sampling cost while preserving quality~\cite{song2021ddim}. Latent diffusion models (LDMs) move the diffusion process to a learned latent space to reduce compute while maintaining perceptual quality, typically via a pretrained VAE and a U-Net with attention for conditional generation~\cite{rombach2022ldm}.
 
 Our implementation reuses Stable Diffusion components in a video setting: a VAE for encoding/decoding frames and a text-conditioned U-Net that provides a strong spatial prior. Rather than fully retraining a video model, we freeze the pretrained 2D U-Net and learn a minimal temporal residual. This design leverages a strong spatial prior while focusing training capacity on temporal coherence.
 
 \subsection{Diffusion Models for Video and Editing}
-Surveys of text-to-video generation and video diffusion models emphasize challenges in temporal dynamics, identity preservation, and long-range coherence~\cite{jan2025text2video,melnik2024vdms}. Diffusion-based video editing surveys provide taxonomies and benchmarks (e.g., V2VBench) and highlight the trade-off between semantic control and temporal coherence in video-to-video and text-driven settings~\cite{sun2023videoedit}. Related surveys on diffusion in low-level vision contextualize diffusion models as stochastic refinement processes that can be combined with learned encoders/decoders for efficiency~\cite{he2024lowlevel}.
+Video diffusion models extend image diffusion to temporal data by modeling frame sequences and motion-dependent structure~\cite{ho2022video}. Video LDMs show that latent diffusion can be adapted to high-resolution video by adding temporal layers to pretrained image models~\cite{blattmann2023videoldm}. Text-to-video systems such as Make-A-Video, Tune-A-Video, and Text2Video-Zero explore different trade-offs between large-scale generation, one-shot tuning, and zero-shot reuse of image diffusion priors~\cite{singer2022makeavideo,wu2023tuneavideo,khachatryan2023text2videozero}. For editing, FateZero demonstrates that attention reuse and fusion can improve zero-shot text-based video editing consistency~\cite{qi2023fatezero}.
 
 Many practical video editing pipelines use per-frame diffusion with post-hoc temporal smoothing or motion guidance. In contrast, SB formulations naturally model continuous-time transport with stochasticity, suggesting a principled pathway to temporal consistency by learning time-conditioned drifts.
 
 \subsection{Vision--Language Guidance}
-Vision--language models provide a semantic interface for users. CLIP aligns images and text in a shared embedding space, enabling semantic scoring and conditioning~\cite{radford2021clip}. CLIP-based guidance is widely used for prompt alignment in generative pipelines, and related adversarial CLIP formulations can improve high-fidelity text-to-image synthesis~\cite{tao2023galip}. In our repository, CLIP text embeddings are used as conditioning vectors for the frozen Stable Diffusion U-Net cross-attention; the project scope additionally motivates soft terminal penalties that can incorporate CLIP similarity as a constraint term.
+Vision--language models provide a semantic interface for users. CLIP aligns images and text in a shared embedding space, enabling semantic scoring and conditioning~\cite{radford2021clip}. In our repository, CLIP text embeddings are used as conditioning vectors for the frozen Stable Diffusion U-Net cross-attention; the project scope additionally motivates soft terminal penalties that can incorporate CLIP similarity as a constraint term.
 
 \section{Problem Statement and Objectives}
 Modern video editing methods struggle to balance semantic controllability (text-driven editing), temporal coherence, and visual realism. Common failures include flickering artifacts and the need for heavy retraining.
@@ -107,17 +107,13 @@ We target the following objectives:
 \section{Method}
 \begin{figure}[t]
 \centering
-\fbox{\parbox{0.94\linewidth}{
-\textbf{Soft-Constrained SB Video Editing Pipeline.} Input video frames $\rightarrow$ Stable Diffusion VAE encoder $\mathcal{E}$ $\rightarrow$ latent trajectory $x_0$.
-Train DriftNet $f_\theta$ (frozen SD 2D U-Net per-frame + small 3D temporal residual) on corrupted paths $x_t$.
-At inference, initialize $x$ by mixing $x_0$ with noise at $t_\mathrm{start}$ and integrate backward with Euler--Maruyama using $f_\theta$ conditioned on CLIP text embeddings.
-Decode edited latents with VAE decoder $\mathcal{D}$ to obtain output video.
-}}
-\caption{High-level pipeline consistent with the repository steps (latent caching, training, and inference).}
+\includegraphics[width=\linewidth]{pipeline.png}
+\caption{High-level soft-constrained Schr\"{o}dinger bridge video editing pipeline. The input video is encoded into Stable Diffusion VAE latents, edited through a prompt-conditioned bridge process with a frozen spatial U-Net and trainable temporal residual, and decoded back into output frames.}
 \label{fig:pipeline}
 \end{figure}
 
 \subsection{Soft-Constrained Schr\"{o}dinger Bridge Objective}
+Figure~\ref{fig:pipeline} summarizes the complete pipeline used in our implementation, from latent encoding and bridge-based drift learning to prompt-conditioned inference and VAE decoding.
 Let $W$ denote a reference stochastic process (e.g., Brownian motion with drift), and let $\pi$ denote a candidate path measure over latent trajectories. A soft-constrained SB objective can be expressed as
 \begin{equation}
 \min_{\pi}\; \mathrm{KL}(\pi\,\|\,W) + \lambda\, \mathcal{D}(\pi_1,\rho_1),
@@ -233,7 +229,7 @@ We summarize the training and inference loops used in the reference implementati
 The codebase provides a four-step pipeline aligned with Fig.~\ref{fig:pipeline}. We describe the implementation with emphasis on design choices that preserve compatibility with pretrained Stable Diffusion components.
 
 \subsection{Data Source and Video Preprocessing}
-Videos are downloaded from WebVid metadata using a multi-threaded downloader. Each clip is decoded with OpenCV and resized to a fixed spatial resolution ($512\times512$ in the current configuration). For each video we extract up to $F=64$ frames; shorter videos are padded by repeating the last frame. Frames are normalized to $[-1,1]$ before VAE encoding.
+Videos are downloaded from WebVid metadata, introduced with the Frozen-in-Time video--text retrieval dataset, using a multi-threaded downloader~\cite{bain2021frozen}. Each clip is decoded with OpenCV and resized to a fixed spatial resolution ($512\times512$ in the current configuration). For each video we extract up to $F=64$ frames; shorter videos are padded by repeating the last frame. Frames are normalized to $[-1,1]$ before VAE encoding.
 
 \subsection{Latent and Text Cache}
 To avoid repeatedly running large pretrained models during training, we cache (i) VAE latents and (ii) text embeddings on disk. Each frame is encoded using a Stable Diffusion VAE encoder and scaled by the Stable Diffusion latent scaling factor. Text is tokenized with the Stable Diffusion tokenizer and encoded by the Stable Diffusion text encoder. Latents are saved as tensors and later batched into $(B,F,4,H',W')$.
@@ -242,7 +238,7 @@ To avoid repeatedly running large pretrained models during training, we cache (i
 DriftNet is implemented as a wrapper around a pretrained Stable Diffusion 2D U-Net. The 2D U-Net is frozen to preserve its spatial prior and reduce training compute. A lightweight temporal head (two 3D convolutions) is appended and trained as a residual correction. The last temporal layer is zero-initialized, ensuring that early in training the model reproduces the frozen 2D U-Net behavior and learns temporal corrections gradually.
 
 \subsection{Training Protocol}
-Training samples a random time $t\sim\mathcal{U}(0,1)$ for each video in the batch, constructs a corrupted latent $x_t$ using~\eqref{eq:corruption_path}, and minimizes an MSE bridge-matching objective between predicted drift and a target drift computed from endpoints and volatility. Only temporal parameters are optimized (AdamW, learning rate $10^{-4}$ in the reference). Checkpoints are written periodically.
+Training samples a random time $t\sim\mathcal{U}(0,1)$ for each video in the batch, constructs a corrupted latent $x_t$ using~\eqref{eq:corruption_path}, and minimizes an MSE bridge-matching objective between predicted drift and a target drift computed from endpoints and volatility. Only temporal parameters are optimized with AdamW, which decouples weight decay from adaptive gradient updates~\cite{loshchilov2019adamw}; the reference learning rate is $10^{-4}$. Checkpoints are written periodically.
 
 \subsection{Inference Protocol (Video-to-Video Editing)}
 The included inference script performs video-to-video editing rather than unconditional text-to-video generation. A source latent clip $x_0$ is loaded from the cache, mixed with Gaussian noise at a chosen start time $t_\mathrm{start}$ (default $0.8$), and integrated backward using Euler--Maruyama for $K=50$ steps. The final latent trajectory is decoded using the Stable Diffusion VAE decoder and written as an MP4.
@@ -299,13 +295,13 @@ We consider text-guided video-to-video editing: given a source clip, edit semant
 Suitable baselines include (i) per-frame latent diffusion editing with identical prompt (no temporal head), (ii) temporal smoothing post-processing on per-frame outputs, and (iii) existing video diffusion/editing models when available. In this repository, a natural internal baseline is to disable the temporal residual block and use only the frozen 2D U-Net drift.
 
 \subsection{Metrics}
-This snapshot focuses on qualitative evaluation and training dynamics. We do not report quantitative metrics due to the limited evaluation setup; adding standardized metrics is left to future work.
+This snapshot reports quantitative evaluation using semantic alignment, perceptual similarity, reconstruction fidelity, and temporal consistency metrics. CLIP Score and CLIPSIM measure text--video semantic alignment using the CLIP embedding space~\cite{radford2021clip}. LPIPS measures learned perceptual distance~\cite{zhang2018lpips}, SSIM and PSNR measure frame-level fidelity with SSIM emphasizing structural similarity~\cite{wang2004ssim}, and warp error measures temporal consistency using optical-flow-based alignment, commonly estimated with methods such as RAFT~\cite{teed2020raft}.
 
 \section{Results}
-The repository used an AMD GPU for training on a small subset. We additionally include training and inference observations from the recorded runs.
+The repository used an AMD MI300X GPU for training on a small WebVid subset. We additionally include training, inference, and quantitative evaluation observations from the recorded runs.
 
 \subsection{Training Dynamics}
-The temporal residual was trained on 472 videos for 40 epochs using an AMD GPU with a limited training budget. The bridge-matching loss fluctuated between 0.7595 (epoch 20) and 1.2675 (epoch 35). Because the target drift is constructed from randomized noise endpoints (the $\epsilon$ term in the corruption path), the loss is not expected to converge to zero. Table~\ref{tab:train_loss} lists representative checkpoints.
+The temporal residual was trained on 472 videos for 40 epochs using an AMD MI300X GPU with a limited training budget. The bridge-matching loss fluctuated between 0.7595 (epoch 20) and 1.2675 (epoch 35). Because the target drift is constructed from randomized noise endpoints (the $\epsilon$ term in the corruption path), the loss is not expected to converge to zero. Table~\ref{tab:train_loss} lists representative checkpoints.
 
 \begin{table}[t]
 \caption{Training loss (bridge-matching MSE) at selected epochs.}
@@ -324,17 +320,43 @@ The temporal residual was trained on 472 videos for 40 epochs using an AMD GPU w
 \end{tabular}
 \end{table}
 
+As shown in Table~\ref{tab:train_loss}, the training loss does not decrease monotonically across epochs. The loss starts at 0.8271 in epoch 1, rises to 1.1406 by epoch 10, reaches its lowest listed value of 0.7595 at epoch 20, increases again at epoch 30, and finishes at 0.7763 in epoch 40. This behavior is consistent with the stochastic bridge formulation: each training step samples noisy intermediate states and randomized target endpoints, so the objective measures how well the drift field matches a changing denoising direction rather than a fixed deterministic target. The final epoch returning close to the best observed loss suggests that the temporal residual learns a usable drift estimate within the limited AMD MI300X training run, even though the fluctuations indicate that the model has not fully stabilized.
+
+\subsection{Evaluation Results}
+Table~\ref{tab:eval_metrics} summarizes the evaluation results. The model achieved a CLIP Score of 0.2213 and CLIPSIM of 0.8799, indicating that the edited videos retain meaningful alignment with the input prompts. The reconstruction-oriented metrics show moderate source preservation, with SSIM of 0.5946 and PSNR of 19.7504 dB. LPIPS of 0.5618 reflects visible perceptual changes from the source videos, while the warp error of 500.5221 indicates that temporal consistency remains a major area for improvement.
+
+\begin{table}[t]
+\caption{Evaluation metrics over generated videos.}
+\label{tab:eval_metrics}
+\centering
+\footnotesize
+\begin{tabular}{@{}p{0.24\linewidth}p{0.14\linewidth}p{0.14\linewidth}p{0.22\linewidth}@{}}
+\toprule
+\textbf{Metric} & \textbf{Mean} & \textbf{Std.} & \textbf{Direction} \\
+\midrule
+CLIP Score & 0.2213 & 0.0272 & Higher is better \\
+CLIPSIM & 0.8799 & 0.0293 & Higher is better \\
+LPIPS & 0.5618 & 0.1344 & Lower is better \\
+SSIM & 0.5946 & 0.1376 & Higher is better \\
+PSNR (dB) & 19.7504 & 2.8301 & Higher is better \\
+Warp Error & 500.5221 & 292.2662 & Lower is better \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The metrics in Table~\ref{tab:eval_metrics} show the expected tradeoff for prompt-guided video editing. The high CLIPSIM value indicates that the generated clips are semantically close to the text conditioning, while the lower CLIP Score suggests that prompt alignment can still be strengthened. The SSIM and PSNR values indicate that the edited outputs preserve part of the source structure, but not as a near-identical reconstruction; this is desirable for editing, where some visual change is required. At the same time, the LPIPS value and large warp error show that perceptual deviation and temporal instability remain visible. Overall, the obtained results indicate that the model can produce prompt-aligned edits after 40 epochs, but stronger temporal regularization or longer training would be needed to reduce frame-to-frame artifacts.
+
 
 
 
 \section{Discussion and Limitations}
-Freezing the pretrained spatial U-Net reduces training cost but also limits the capacity for large structural edits. The current implementation relies on cached WebVid latents and a simplified SB corruption path, and it does not yet include explicit CLIP loss backpropagation through sampling. Future work can incorporate adaptive $\lambda(t)$ schedules, explicit terminal penalties $\mathcal{D}(\pi_1,\rho_1)$, and stronger temporal objectives.
+Freezing the pretrained spatial U-Net reduces training cost but also limits the capacity for large structural edits. The epoch-wise behavior in Table~\ref{tab:train_loss} suggests that the lightweight temporal residual can learn a useful bridge drift under a constrained training budget, but the non-monotonic loss curve also shows that the optimization remains noisy. The quantitative results in Table~\ref{tab:eval_metrics} further support this interpretation: semantic alignment is reasonable, but temporal consistency and perceptual smoothness are not yet strong enough for high-fidelity video editing. The current implementation relies on cached WebVid latents and a simplified SB corruption path, and it does not yet include explicit CLIP loss backpropagation through sampling. Future work can incorporate adaptive $\lambda(t)$ schedules, explicit terminal penalties $\mathcal{D}(\pi_1,\rho_1)$, and stronger temporal objectives.
 
 \subsection{Scope of Edits}
 The repository demonstrates prompt-conditioned video-to-video editing by starting from a noised source trajectory. This setting is well-suited to attribute/style changes that preserve global structure. More aggressive edits (changing layout, geometry, or long-term identity) may require training additional parameters beyond the temporal residual head or incorporating stronger conditioning and constraints.
 
 \subsection{Evaluation Gaps}
-While the code supports end-to-end generation of edited videos, it does not currently bundle an evaluation harness for temporal metrics and benchmark reporting.
+The current evaluation is limited to the recorded WebVid subset and does not yet include comparisons against external video-editing baselines. Future evaluation should add benchmark splits, human preference studies, and ablations over the temporal residual module and solver settings.
 
 \subsection{Guidance as Constraints vs. Conditioning}
 In the present snapshot, text guidance is applied through conditioning (cross-attention) in the frozen Stable Diffusion U-Net. The project motivation additionally describes CLIP-based soft constraints as penalty terms; implementing these penalties requires differentiable evaluation of semantic similarity along the trajectory and careful scheduling of $\lambda(t)$.
