@@ -1,0 +1,7 @@
+Metric,Mean,Std,Direction
+CLIP Score,0.2213,0.0272,Higher is better
+CLIPSIM,0.8799,0.0293,Higher is better
+LPIPS,0.5618,0.1344,Lower is better
+SSIM,0.5946,0.1376,Higher is better
+PSNR (dB),19.7504,2.8301,Higher is better
+Warp Error,500.5221,292.2662,Lower is better

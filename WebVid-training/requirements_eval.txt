@@ -1,0 +1,10 @@
+lpips
+scikit-image
+opencv-python
+torch
+torchvision
+numpy
+pandas
+tqdm
+transformers
+Pillow

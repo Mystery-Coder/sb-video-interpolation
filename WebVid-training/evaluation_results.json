@@ -1,0 +1,19 @@
+{
+  "num_videos": 30,
+  "max_frames_per_video": 64,
+  "aggregate_metrics": {
+    "clip_score_mean": 0.2213,
+    "clip_score_std": 0.0272,
+    "clipsim_mean": 0.8799,
+    "clipsim_std": 0.0293,
+    "lpips_mean": 0.5618,
+    "lpips_std": 0.1344,
+    "ssim_mean": 0.5946,
+    "ssim_std": 0.1376,
+    "psnr_mean": 19.75,
+    "psnr_std": 2.83,
+    "warp_error_mean": 500.52,
+    "warp_error_std": 292.27
+  },
+  "note": "Per-video results were lost due to JSON serialization error. Re-run step7_evaluate.py to regenerate."
+}
